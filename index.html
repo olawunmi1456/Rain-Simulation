@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Ready Rain Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.js"></script>
+    <!-- Added p5.sound library for audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/addons/p5.sound.min.js"></script>
+    <!-- Added FontAwesome CSS for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* YouTube Overlay */
+        .youtube-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.9) 0%, rgba(0,0,0,1) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: fadeOut 2s ease 3s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+        
+        .youtube-title {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #4aa3ff, #00ffaa, #4aa3ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 30px rgba(74, 163, 255, 0.5);
+            animation: shine 3s infinite linear, floatAnimation 6s ease-in-out infinite;
+        }
+        
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+        
+        @keyframes floatAnimation {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .youtube-subtitle {
+            font-size: 1.5rem;
+            color: #88aadd;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            animation: fadeInUp 1s ease 1s both;
+            opacity: 0;
+        }
+        
+        .youtube-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 30px;
+            animation: fadeInUp 1s ease 1.5s both;
+            opacity: 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            background: rgba(20, 40, 80, 0.6);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid rgba(74, 163, 255, 0.3);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4aa3ff;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #88aadd;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Canvas */
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        
+        /* Control Bar */
+        .control-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            padding: 15px 30px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            z-index: 100;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            opacity: 0.3;
+        }
+        
+        .control-bar:hover {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-5px);
+        }
+        
+        .control-btn {
+            background: rgba(40, 80, 120, 0.7);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-btn:hover {
+            background: rgba(60, 120, 200, 0.9);
+            transform: scale(1.1);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .scene-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            font-size: 0.9rem;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        
+        .scene-indicator:hover {
+            opacity: 1;
+        }
+        
+        .scene-title {
+            color: #4aa3ff;
+            font-weight: 600;
+        }
+        
+        .scene-time {
+            color: #88aadd;
+            font-size: 0.8rem;
+        }
+        
+        /* YouTube UI Elements */
+        .youtube-ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        
+        .youtube-ui:hover {
+            opacity: 1;
+        }
+        
+        .youtube-tag {
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .youtube-channel {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Scene Transition Overlay */
+        .scene-transition {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 250px;
+            z-index: 100;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        
+        .info-panel:hover {
+            opacity: 1;
+            transform: translateY(-50%) translateX(-5px);
+        }
+        
+        .info-title {
+            color: #4aa3ff;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(74, 163, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .info-item {
+            margin-bottom: 15px;
+        }
+        
+        .info-label {
+            color: #88aadd;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        /* Audio Controls */
+        .audio-controls {
+            position: fixed;
+            bottom: 100px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .audio-controls:hover {
+            opacity: 1;
+        }
+        
+        .audio-slider {
+            width: 150px;
+            height: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .audio-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #4aa3ff;
+            cursor: pointer;
+        }
+        
+        .audio-label {
+            font-size: 0.8rem;
+            color: #88aadd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Audio Mute Button */
+        .audio-btn {
+            background: rgba(40, 80, 120, 0.7);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .youtube-title {
+                font-size: 2.5rem;
+            }
+            
+            .youtube-subtitle {
+                font-size: 1.2rem;
+                padding: 0 20px;
+            }
+            
+            .youtube-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .control-bar {
+                flex-wrap: wrap;
+                width: 90%;
+                justify-content: center;
+                border-radius: 20px;
+            }
+            
+            .info-panel, .audio-controls {
+                display: none;
+            }
+            
+            .youtube-ui {
+                left: 10px;
+                top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- YouTube Intro Overlay -->
+    <div class="youtube-overlay">
+        <h1 class="youtube-title">Interactive Rain Simulation</h1>
+        <p class="youtube-subtitle">A mesmerizing real-time weather visualization with dynamic effects, auto-cycling scenes, and cinematic visuals perfect for relaxation, study, or as a coding tutorial background.</p>
+        
+        <div class="youtube-stats">
+            <div class="stat-item">
+                <div class="stat-value">60+ FPS</div>
+                <div class="stat-label">Smooth Animation</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">6 Scenes</div>
+                <div class="stat-label">Auto-Cycling</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">Real-time</div>
+                <div class="stat-label">Particle System</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Canvas will be inserted here -->
+    <div id="canvas-container"></div>
+    
+    <!-- YouTube UI Elements -->
+    <div class="youtube-ui">
+        <div class="youtube-tag">Live Simulation</div>
+        <div class="youtube-channel">Coding Visualization</div>
+    </div>
+    
+    <!-- Scene Indicator -->
+    <div class="scene-indicator">
+        <div class="scene-title" id="scene-title">Heavy Rain</div>
+        <div class="scene-time" id="scene-time">Next scene in: 25s</div>
+    </div>
+    
+    <!-- Info Panel -->
+    <div class="info-panel">
+        <div class="info-title">Simulation Stats</div>
+        
+        <div class="info-item">
+            <div class="info-label">Current Scene</div>
+            <div class="info-value" id="info-scene">Heavy Rain</div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-label">Raindrops</div>
+            <div class="info-value" id="info-raindrops">1,247</div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-label">Wind Speed</div>
+            <div class="info-value" id="info-wind">Medium</div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-label">Intensity</div>
+            <div class="info-value" id="info-intensity">85%</div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-label">Frame Rate</div>
+            <div class="info-value" id="info-fps">60 FPS</div>
+        </div>
+        
+        <div class="info-item">
+            <div class="info-label">Audio</div>
+            <div class="info-value" id="info-audio">Active</div>
+        </div>
+    </div>
+    
+    <!-- Audio Controls -->
+    <div class="audio-controls">
+        <div class="audio-label">
+            <span>Rain Volume</span>
+            <span id="rain-volume-display">70%</span>
+        </div>
+        <input type="range" min="0" max="100" value="70" class="audio-slider" id="rain-volume" title="Adjust rain volume">
+        
+        <div class="audio-label">
+            <span>Thunder Volume</span>
+            <span id="thunder-volume-display">50%</span>
+        </div>
+        <input type="range" min="0" max="100" value="50" class="audio-slider" id="thunder-volume" title="Adjust thunder volume">
+        
+        <button class="audio-btn" id="btn-mute" title="Mute/Unmute">
+            <i class="fas fa-volume-up"></i>
+        </button>
+    </div>
+    
+    <!-- Control Bar -->
+    <div class="control-bar">
+        <button class="control-btn" id="btn-pause" title="Pause/Resume">
+            <i class="fas fa-pause"></i>
+        </button>
+        <button class="control-btn" id="btn-next" title="Next Scene">
+            <i class="fas fa-forward"></i>
+        </button>
+        <button class="control-btn" id="btn-intensity-up" title="Increase Intensity">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="control-btn" id="btn-intensity-down" title="Decrease Intensity">
+            <i class="fas fa-minus"></i>
+        </button>
+        <button class="control-btn" id="btn-fullscreen" title="Toggle Fullscreen">
+            <i class="fas fa-expand"></i>
+        </button>
+    </div>
+    
+    <!-- Scene Transition Overlay -->
+    <div class="scene-transition" id="scene-transition"></div>
+
+    <script>
+        // YouTube Ready Interactive Rain Simulation
+        // Optimized for screen recording and video content
+        // Now with sound effects!
+        
+        // Declare p5.js variables as global
+        let raindrops = [];
+        let stars = [];
+        let clouds = [];
+        let particles = [];
+        let canvas;
+        let sceneCycleInterval;
+        
+        // Audio variables
+        let rainSound;
+        let thunderSound;
+        let rainVolume = 0.7;
+        let thunderVolume = 0.5;
+        let isMuted = false;
+        let audioInitialized = false;
+        let lastThunderTime = 0;
+        let thunderCooldown = 10000; // 10 seconds minimum between thunder sounds
+        
+        // Scene management
+        const scenes = [
+            { name: "Heavy Rain", duration: 30, intensity: 200, wind: 1.5, color: [10, 10, 50], rainSound: true },
+            { name: "Light Drizzle", duration: 25, intensity: 80, wind: 0.5, color: [20, 20, 60], rainSound: true },
+            { name: "Thunderstorm", duration: 35, intensity: 250, wind: 2.0, color: [5, 5, 30], rainSound: true, thunder: true },
+            { name: "Clear Night", duration: 30, intensity: 0, wind: 0.3, color: [0, 0, 20], rainSound: false },
+            { name: "Moonlit Rain", duration: 28, intensity: 120, wind: 1.0, color: [15, 15, 40], rainSound: true },
+            { name: "Dawn Breaking", duration: 32, intensity: 60, wind: 0.8, color: [30, 20, 50], rainSound: true }
+        ];
+        
+        let currentScene = 0;
+        let sceneStartTime = 0;
+        let isPaused = false;
+        let rainIntensity = 150;
+        let windStrength = 1.0;
+        let bgColor = [10, 10, 50];
+        let isRaining = true;
+        let showMoon = false;
+        let showStars = false;
+        let lightningActive = false;
+        let lightningTimer = 0;
+        let frameRate = 60;
+        let lastFrameTime = 0;
+        
+        // Poetry for different scenes
+        const scenePoetry = [
+            "Rain falls in torrents,\nwashing the world clean...\nEach drop a note in nature's symphony.",
+            "Gentle drizzle whispers secrets\nto the earth...\nSoft tears from heaven\nnourishing life.",
+            "Thunder roars, lightning cracks\nthe sky...\nNature's power unleashed\nin stormy dance.",
+            "Stars twinkle in the silent\nvelvet night...\nMoonlight paints the world\nin silver dreams.",
+            "Raindrops sparkle in the\nmoonlight's glow...\nLiquid diamonds falling\nfrom the sky.",
+            "Dawn breaks with promise\nof a new day...\nGolden light pierces\nthe morning mist."
+        ];
+        
+        let currentPoetry = "";
+        
+        // Preload function for audio files
+        function preload() {
+            // Load sound files - Using placeholder URLs, replace with actual rain.wave and thunder.wave files
+            // For demonstration, we'll use generated sounds if files aren't found
+            try {
+                // Try to load external sound files
+                rainSound = loadSound('rain.wave');
+                thunderSound = loadSound('thunder.wave');
+            } catch (error) {
+                console.log("Sound files not found, using fallback method");
+                // We'll create sounds programmatically if files aren't available
+                createFallbackSounds();
+            }
+        }
+        
+        function createFallbackSounds() {
+            // Create a rain-like sound using p5.Oscillator and p5.Noise
+            rainSound = new p5.AudioIn();
+            
+            // For thunder, we'll use a simple synthesized sound
+            // This is a fallback if the thunder.wave file isn't available
+            thunderSound = {
+                play: function() {
+                    // Create a quick thunder-like sound
+                    let osc = new p5.Oscillator('sawtooth');
+                    let env = new p5.Envelope();
+                    
+                    osc.freq(80);
+                    osc.amp(env);
+                    osc.start();
+                    
+                    env.play(osc, 0, 0.1, 0.1, 0.5, 0.8);
+                    
+                    setTimeout(() => {
+                        osc.stop();
+                    }, 3000);
+                }
+            };
+        }
+        
+        function setup() {
+            // Create full-screen canvas
+            canvas = createCanvas(windowWidth, windowHeight);
+            canvas.parent('canvas-container');
+            
+            // Initialize scene
+            sceneStartTime = millis();
+            currentPoetry = scenePoetry[currentScene];
+            
+            // Create initial elements
+            createStars(300);
+            createClouds(5);
+            
+            // Start with rain
+            if (scenes[currentScene].intensity > 0) {
+                isRaining = true;
+                for (let i = 0; i < scenes[currentScene].intensity; i++) {
+                    raindrops.push(new Raindrop());
+                }
+            } else {
+                isRaining = false;
+                showStars = true;
+                showMoon = true;
+            }
+            
+            // Initialize audio
+            initializeAudio();
+            
+            // Set up UI
+            setupUI();
+            
+            // Auto-cycle scenes
+            startSceneCycle();
+            
+            lastFrameTime = millis();
+            lastThunderTime = millis();
+        }
+        
+        function initializeAudio() {
+            // Setup audio controls
+            if (rainSound) {
+                try {
+                    rainSound.loop();
+                    rainSound.setVolume(rainVolume);
+                    audioInitialized = true;
+                } catch (error) {
+                    console.log("Audio initialization error:", error);
+                }
+            }
+        }
+        
+        function startSceneCycle() {
+            if (sceneCycleInterval) {
+                clearInterval(sceneCycleInterval);
+            }
+            sceneCycleInterval = setInterval(nextScene, scenes[currentScene].duration * 1000);
+        }
+        
+        function draw() {
+            if (isPaused) return;
+            
+            // Calculate FPS
+            let currentTime = millis();
+            let deltaTime = currentTime - lastFrameTime;
+            frameRate = deltaTime > 0 ? 1000 / deltaTime : 60;
+            lastFrameTime = currentTime;
+            
+            // Update scene timer
+            updateSceneTimer();
+            
+            // Update audio based on scene
+            updateAudio();
+            
+            // Draw background based on scene
+            drawBackground();
+            
+            // Handle lightning
+            if (lightningActive) {
+                drawLightning();
+            }
+            
+            // Draw scene elements
+            if (isRaining) {
+                updateRain();
+                drawRain();
+            }
+            
+            if (showStars) {
+                drawStars();
+            }
+            
+            if (showMoon) {
+                drawMoon();
+            }
+            
+            drawClouds();
+            drawParticles();
+            
+            // Draw poetry if not in heavy rain scene
+            if (scenes[currentScene].intensity < 150) {
+                drawPoetry();
+            }
+            
+            // Update info panel
+            updateInfoPanel();
+        }
+        
+        function updateAudio() {
+            if (!audioInitialized || isMuted) return;
+            
+            // Update rain sound based on current scene
+            if (rainSound) {
+                // Adjust rain volume based on intensity
+                let targetVolume = scenes[currentScene].rainSound ? rainVolume * (rainIntensity / 250) : 0;
+                
+                // Smooth volume transition
+                let currentVol = rainSound.getVolume() || 0;
+                let newVol = lerp(currentVol, targetVolume, 0.05);
+                rainSound.setVolume(newVol);
+                
+                // Fade in/out based on scene
+                if (scenes[currentScene].rainSound && !rainSound.isPlaying()) {
+                    rainSound.loop();
+                } else if (!scenes[currentScene].rainSound && rainSound.isPlaying()) {
+                    rainSound.setVolume(0);
+                }
+            }
+            
+            // Random thunder in thunderstorm scene
+            if (scenes[currentScene].name === "Thunderstorm" && 
+                scenes[currentScene].thunder && 
+                random(1) < 0.003 && 
+                !lightningActive && 
+                millis() - lastThunderTime > thunderCooldown) {
+                
+                triggerLightning();
+                playThunder();
+            }
+        }
+        
+        function playThunder() {
+            if (!audioInitialized || isMuted || !thunderSound) return;
+            
+            try {
+                // Set thunder volume with some randomness
+                let vol = thunderVolume * random(0.7, 1.0);
+                
+                if (typeof thunderSound.setVolume === 'function') {
+                    thunderSound.setVolume(vol);
+                }
+                
+                thunderSound.play();
+                lastThunderTime = millis();
+                
+                // Add a cooldown variation
+                thunderCooldown = random(8000, 15000);
+                
+            } catch (error) {
+                console.log("Error playing thunder sound:", error);
+            }
+        }
+        
+        function drawBackground() {
+            // Gradient background based on scene
+            let topColor = color(bgColor[0], bgColor[1], bgColor[2]);
+            let bottomColor = color(bgColor[0] + 20, bgColor[1] + 20, bgColor[2] + 30);
+            
+            for (let y = 0; y < height; y++) {
+                let inter = map(y, 0, height, 0, 1);
+                let c = lerpColor(topColor, bottomColor, inter);
+                stroke(c);
+                line(0, y, width, y);
+            }
+            
+            // Add subtle noise effect
+            for (let i = 0; i < 100; i++) {
+                let x = random(width);
+                let y = random(height);
+                let alpha = random(5, 15);
+                stroke(255, 255, 255, alpha);
+                point(x, y);
+            }
+        }
+        
+        function updateRain() {
+            // Update rain intensity based on scene
+            let targetIntensity = scenes[currentScene].intensity;
+            rainIntensity = lerp(rainIntensity, targetIntensity, 0.05);
+            
+            // Add/remove raindrops based on intensity
+            let targetCount = rainIntensity * (height / 500);
+            
+            while (raindrops.length < targetCount * 0.9) {
+                raindrops.push(new Raindrop());
+            }
+            
+            while (raindrops.length > targetCount * 1.1) {
+                raindrops.pop();
+            }
+            
+            // Update wind
+            let targetWind = scenes[currentScene].wind;
+            windStrength = lerp(windStrength, targetWind, 0.05);
+            
+            // Update raindrops
+            for (let i = raindrops.length - 1; i >= 0; i--) {
+                raindrops[i].update(windStrength);
+                
+                // Remove if off screen
+                if (raindrops[i].y > height + 50 || raindrops[i].x < -50 || raindrops[i].x > width + 50) {
+                    raindrops.splice(i, 1);
+                }
+            }
+        }
+        
+        function drawRain() {
+            // Draw all raindrops
+            for (let drop of raindrops) {
+                drop.display();
+            }
+            
+            // Draw rain mist effect
+            if (rainIntensity > 100) {
+                for (let i = 0; i < rainIntensity / 10; i++) {
+                    let x = random(width);
+                    let y = random(height);
+                    let size = random(2, 5);
+                    let alpha = random(20, 40);
+                    fill(200, 220, 255, alpha);
+                    noStroke();
+                    ellipse(x, y, size, size);
+                }
+            }
+        }
+        
+        function createStars(count) {
+            stars = [];
+            for (let i = 0; i < count; i++) {
+                stars.push({
+                    x: random(width),
+                    y: random(height),
+                    size: random(1, 3),
+                    brightness: random(100, 255),
+                    twinkleSpeed: random(0.02, 0.1),
+                    twinkleOffset: random(TWO_PI)
+                });
+            }
+        }
+        
+        function drawStars() {
+            for (let star of stars) {
+                let twinkle = sin(frameCount * star.twinkleSpeed + star.twinkleOffset) * 0.5 + 0.5;
+                let alpha = star.brightness * twinkle;
+                
+                fill(255, 255, 255, alpha);
+                noStroke();
+                ellipse(star.x, star.y, star.size, star.size);
+                
+                // Add occasional bright twinkle
+                if (random(1) < 0.001) {
+                    fill(255, 255, 255, 255);
+                    ellipse(star.x, star.y, star.size * 3, star.size * 3);
+                }
+            }
+        }
+        
+        function drawMoon() {
+            let moonX = width * 0.8;
+            let moonY = height * 0.2;
+            let moonSize = 80;
+            
+            // Moon glow
+            for (let i = 0; i < 5; i++) {
+                let glowSize = moonSize + i * 20;
+                let glowAlpha = 30 - i * 6;
+                fill(255, 255, 255, glowAlpha);
+                noStroke();
+                ellipse(moonX, moonY, glowSize, glowSize);
+            }
+            
+            // Moon
+            fill(255, 255, 255, 220);
+            ellipse(moonX, moonY, moonSize, moonSize);
+            
+            // Moon craters
+            fill(255, 255, 255, 180);
+            ellipse(moonX - 15, moonY - 10, 12, 12);
+            ellipse(moonX + 20, moonY + 15, 18, 18);
+            ellipse(moonX + 5, moonY - 20, 8, 8);
+            
+            // Moonlight reflection on "water"
+            if (isRaining) {
+                for (let i = 0; i < 50; i++) {
+                    let x = random(width);
+                    let y = random(height * 0.6, height);
+                    let size = random(3, 8);
+                    let alpha = random(10, 30);
+                    fill(255, 255, 255, alpha);
+                    ellipse(x, y, size, size);
+                }
+            }
+        }
+        
+        function createClouds(count) {
+            clouds = [];
+            for (let i = 0; i < count; i++) {
+                clouds.push({
+                    x: random(width),
+                    y: random(height * 0.1, height * 0.3),
+                    size: random(100, 200),
+                    speed: random(0.2, 0.8),
+                    density: random(0.5, 1.0)
+                });
+            }
+        }
+        
+        function drawClouds() {
+            for (let cloud of clouds) {
+                // Move cloud
+                cloud.x += cloud.speed;
+                if (cloud.x > width + cloud.size) {
+                    cloud.x = -cloud.size;
+                }
+                
+                // Draw cloud with multiple ellipses
+                let alpha = isRaining ? 100 : 150;
+                alpha *= cloud.density;
+                
+                fill(255, 255, 255, alpha);
+                noStroke();
+                
+                // Main cloud body
+                ellipse(cloud.x, cloud.y, cloud.size, cloud.size * 0.4);
+                
+                // Cloud puffs
+                ellipse(cloud.x - cloud.size * 0.3, cloud.y - cloud.size * 0.1, cloud.size * 0.6, cloud.size * 0.5);
+                ellipse(cloud.x + cloud.size * 0.3, cloud.y - cloud.size * 0.1, cloud.size * 0.6, cloud.size * 0.5);
+                ellipse(cloud.x - cloud.size * 0.5, cloud.y + cloud.size * 0.05, cloud.size * 0.5, cloud.size * 0.4);
+                ellipse(cloud.x + cloud.size * 0.5, cloud.y + cloud.size * 0.05, cloud.size * 0.5, cloud.size * 0.4);
+            }
+        }
+        
+        function triggerLightning() {
+            lightningActive = true;
+            lightningTimer = 10; // frames of lightning
+            
+            // Create lightning particles
+            for (let i = 0; i < 50; i++) {
+                particles.push({
+                    x: random(width),
+                    y: random(height * 0.5),
+                    size: random(2, 10),
+                    speed: random(2, 10),
+                    alpha: random(150, 255),
+                    life: random(10, 30)
+                });
+            }
+        }
+        
+        function drawLightning() {
+            if (lightningTimer > 0) {
+                // Flash effect
+                let flashAlpha = lightningTimer * 25;
+                fill(255, 255, 255, flashAlpha);
+                noStroke();
+                rect(0, 0, width, height);
+                
+                lightningTimer--;
+                
+                if (lightningTimer <= 0) {
+                    lightningActive = false;
+                }
+            }
+        }
+        
+        function drawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                
+                // Update
+                p.y += p.speed;
+                p.alpha -= 255 / p.life;
+                p.size *= 0.95;
+                
+                // Draw
+                fill(255, 255, 255, p.alpha);
+                noStroke();
+                ellipse(p.x, p.y, p.size, p.size);
+                
+                // Remove dead particles
+                if (p.alpha <= 0 || p.size <= 0.5) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        function drawPoetry() {
+            push();
+            let fontSize = min(width / 40, 24);
+            textSize(fontSize);
+            textAlign(CENTER, CENTER);
+            textStyle(ITALIC);
+            
+            // Text shadow
+            fill(0, 0, 0, 100);
+            text(currentPoetry, width/2 + 2, height/2 + 2);
+            
+            // Main text
+            fill(255, 255, 255, 200);
+            text(currentPoetry, width/2, height/2);
+            
+            pop();
+        }
+        
+        function updateSceneTimer() {
+            let elapsed = (millis() - sceneStartTime) / 1000;
+            let remaining = scenes[currentScene].duration - elapsed;
+            
+            if (remaining <= 0) {
+                nextScene();
+            } else {
+                document.getElementById('scene-time').textContent = 
+                    `Next scene in: ${Math.ceil(remaining)}s`;
+            }
+        }
+        
+        function nextScene() {
+            // Transition effect
+            document.getElementById('scene-transition').style.opacity = '1';
+            
+            setTimeout(() => {
+                // Update scene
+                currentScene = (currentScene + 1) % scenes.length;
+                sceneStartTime = millis();
+                
+                // Update scene parameters
+                bgColor = scenes[currentScene].color;
+                isRaining = scenes[currentScene].intensity > 0;
+                showStars = !isRaining || scenes[currentScene].intensity < 100;
+                showMoon = !isRaining || scenes[currentScene].name.includes("Moonlit");
+                
+                // Update UI
+                document.getElementById('scene-title').textContent = scenes[currentScene].name;
+                document.getElementById('info-scene').textContent = scenes[currentScene].name;
+                
+                // Update poetry
+                currentPoetry = scenePoetry[currentScene];
+                
+                // Clear and create new raindrops if needed
+                raindrops = [];
+                if (isRaining) {
+                    for (let i = 0; i < scenes[currentScene].intensity; i++) {
+                        raindrops.push(new Raindrop());
+                    }
+                }
+                
+                // Restart scene cycle
+                startSceneCycle();
+                
+                // Hide transition
+                setTimeout(() => {
+                    document.getElementById('scene-transition').style.opacity = '0';
+                }, 500);
+                
+            }, 500);
+        }
+        
+        function updateInfoPanel() {
+            document.getElementById('info-raindrops').textContent = 
+                raindrops.length.toLocaleString();
+            document.getElementById('info-wind').textContent = 
+                windStrength < 0.5 ? "Calm" : windStrength < 1.5 ? "Medium" : "Strong";
+            document.getElementById('info-intensity').textContent = 
+                `${Math.round((rainIntensity / 250) * 100)}%`;
+            document.getElementById('info-fps').textContent = 
+                `${Math.round(frameRate)} FPS`;
+            document.getElementById('info-audio').textContent = 
+                isMuted ? "Muted" : "Active";
+        }
+        
+        function setupUI() {
+            // Button event listeners
+            document.getElementById('btn-pause').addEventListener('click', () => {
+                isPaused = !isPaused;
+                let icon = document.querySelector('#btn-pause i');
+                icon.className = isPaused ? 'fas fa-play' : 'fas fa-pause';
+                
+                // Pause/resume audio
+                if (rainSound && audioInitialized) {
+                    if (isPaused) {
+                        rainSound.pause();
+                    } else {
+                        rainSound.loop();
+                    }
+                }
+            });
+            
+            document.getElementById('btn-next').addEventListener('click', nextScene);
+            
+            document.getElementById('btn-intensity-up').addEventListener('click', () => {
+                scenes[currentScene].intensity = Math.min(scenes[currentScene].intensity + 20, 300);
+            });
+            
+            document.getElementById('btn-intensity-down').addEventListener('click', () => {
+                scenes[currentScene].intensity = Math.max(scenes[currentScene].intensity - 20, 0);
+            });
+            
+            document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
+            
+            // Audio control event listeners
+            document.getElementById('rain-volume').addEventListener('input', (e) => {
+                rainVolume = e.target.value / 100;
+                document.getElementById('rain-volume-display').textContent = `${e.target.value}%`;
+                if (rainSound && audioInitialized && !isMuted) {
+                    rainSound.setVolume(rainVolume);
+                }
+            });
+            
+            document.getElementById('thunder-volume').addEventListener('input', (e) => {
+                thunderVolume = e.target.value / 100;
+                document.getElementById('thunder-volume-display').textContent = `${e.target.value}%`;
+            });
+            
+            document.getElementById('btn-mute').addEventListener('click', () => {
+                isMuted = !isMuted;
+                let icon = document.querySelector('#btn-mute i');
+                icon.className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+                
+                if (rainSound && audioInitialized) {
+                    if (isMuted) {
+                        rainSound.setVolume(0);
+                    } else {
+                        rainSound.setVolume(rainVolume);
+                    }
+                }
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                resizeCanvas(windowWidth, windowHeight);
+                createStars(300); // Recreate stars for new canvas size
+                createClouds(5); // Recreate clouds
+            });
+            
+            // Initialize audio controls display
+            document.getElementById('rain-volume-display').textContent = "70%";
+            document.getElementById('thunder-volume-display').textContent = "50%";
+        }
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        
+        // Raindrop class
+        class Raindrop {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = random(-100, width + 100);
+                this.y = random(-200, -50);
+                this.speed = random(3, 10);
+                this.length = random(10, 25);
+                this.thickness = random(1, 3);
+                this.windEffect = random(-1, 1);
+                this.color = [
+                    random(150, 220),
+                    random(180, 240),
+                    random(200, 255),
+                    random(150, 220)
+                ];
+                this.splash = false;
+                this.splashSize = 0;
+            }
+            
+            update(windStrength) {
+                // Apply wind
+                this.x += this.windEffect * windStrength;
+                
+                // Move downward
+                this.y += this.speed;
+                
+                // Splash when hitting bottom
+                if (this.y > height - 20 && !this.splash) {
+                    this.splash = true;
+                    this.splashSize = 5;
+                    
+                    // Create splash particles
+                    for (let i = 0; i < 5; i++) {
+                        particles.push({
+                            x: this.x,
+                            y: height - 10,
+                            size: random(2, 6),
+                            speed: random(-3, 0),
+                            alpha: this.color[3],
+                            life: random(20, 40)
+                        });
+                    }
+                }
+                
+                // Grow splash
+                if (this.splash) {
+                    this.splashSize += 0.5;
+                    if (this.splashSize > 15) {
+                        this.reset();
+                    }
+                }
+                
+                // Reset if off screen
+                if (this.y > height + 100 || this.x < -200 || this.x > width + 200) {
+                    this.reset();
+                }
+            }
+            
+            display() {
+                if (!this.splash) {
+                    // Draw raindrop
+                    stroke(this.color[0], this.color[1], this.color[2], this.color[3]);
+                    strokeWeight(this.thickness);
+                    line(this.x, this.y, this.x, this.y + this.length);
+                    
+                    // Draw raindrop head
+                    fill(this.color[0], this.color[1], this.color[2], this.color[3]);
+                    noStroke();
+                    ellipse(this.x, this.y + this.length/2, this.thickness * 2, this.thickness * 2);
+                } else {
+                    // Draw splash
+                    noFill();
+                    stroke(this.color[0], this.color[1], this.color[2], this.color[3] * 0.7);
+                    strokeWeight(1);
+                    ellipse(this.x, height - 5, this.splashSize, this.splashSize/2);
+                }
+            }
+        }
+        
+        // Handle keyboard shortcuts for YouTube recording
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    isPaused = !isPaused;
+                    let icon = document.querySelector('#btn-pause i');
+                    icon.className = isPaused ? 'fas fa-play' : 'fas fa-pause';
+                    break;
+                case 'n':
+                case 'ArrowRight':
+                    nextScene();
+                    break;
+                case 'f':
+                    toggleFullscreen();
+                    break;
+                case '+':
+                    scenes[currentScene].intensity = Math.min(scenes[currentScene].intensity + 20, 300);
+                    break;
+                case '-':
+                    scenes[currentScene].intensity = Math.max(scenes[currentScene].intensity - 20, 0);
+                    break;
+                case 'm':
+                    // Toggle mute
+                    isMuted = !isMuted;
+                    let muteIcon = document.querySelector('#btn-mute i');
+                    muteIcon.className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+                    break;
+            }
+        });
+        
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', (event) => {
+            // p5.js will call preload() and setup() automatically
+            // Add click handler to start audio (required by some browsers)
+            document.addEventListener('click', () => {
+                if (!audioInitialized && rainSound) {
+                    try {
+                        userStartAudio();
+                        initializeAudio();
+                    } catch (error) {
+                        console.log("Audio start error:", error);
+                    }
+                }
+            }, { once: true });
+        });
+    </script>
+</body>
+</html>
